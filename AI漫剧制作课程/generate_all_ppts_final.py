@@ -7,9 +7,7 @@ AI漫剧制作课程 PPT 全量生成脚本
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from generate_all_ppts import generate_module_ppt, make_pr, make_title_slide, make_toc_slide, make_end_slide, make_content_slide, make_summary_slide, COLORS, SLIDE_WIDTH
-from pptx import Presentation
-from pptx.util import Inches, Pt
+from generate_all_ppts import generate_module_ppt, make_pr, C, SLIDE_W, SLIDE_H
 
 # 导入各批次数据
 from ppt_data_02_05 import MODULES_02_05

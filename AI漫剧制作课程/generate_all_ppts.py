@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-AI漫剧制作课程 PPT 批量生成脚本 v3
-视觉丰富版 - 多种布局、数据可视化、装饰元素
+AI漫剧制作课程 PPT 生成器 v4
+基于 CRAP 设计原则 + 现代高级审美
+- Contrast: 强对比层次感
+- Repetition: 重复视觉元素统一风格
+- Alignment: 网格对齐系统
+- Proximity: 亲密性分组
 """
 
 import os
@@ -10,855 +14,756 @@ from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
-from pptx.oxml.ns import qn
 
-# ── 配色方案 ──
-COLORS = {
-    'bg_dark':    RGBColor(0x0B, 0x11, 0x20),
-    'bg_card':    RGBColor(0x14, 0x1E, 0x33),
-    'bg_card2':   RGBColor(0x1A, 0x28, 0x42),
-    'accent':     RGBColor(0x00, 0xD4, 0xFF),
-    'accent2':    RGBColor(0x7C, 0x3A, 0xED),
-    'accent3':    RGBColor(0xFF, 0x6B, 0x35),
-    'accent4':    RGBColor(0x10, 0xB9, 0x81),
-    'accent5':    RGBColor(0xF5, 0x9E, 0x0B),
-    'accent6':    RGBColor(0xEF, 0x44, 0x44),
-    'text_white': RGBColor(0xFF, 0xFF, 0xFF),
-    'text_light': RGBColor(0xCB, 0xD5, 0xE8),
-    'text_dim':   RGBColor(0x6B, 0x7B, 0x9E),
-    'border':     RGBColor(0x2D, 0x3B, 0x55),
-    'gradient1':  RGBColor(0x0E, 0x1A, 0x2D),
-    'gradient2':  RGBColor(0x12, 0x24, 0x3E),
+# ══════════════════════════════════════════════
+# 设计系统 Design System
+# ══════════════════════════════════════════════
+
+# 60-30-10 配色法则
+# 60% 主色（深色背景）  30% 辅色（卡片/文字）  10% 强调色（点缀）
+C = {
+    # 60% - 背景层
+    'bg':         RGBColor(0x0A, 0x0E, 0x1A),   # 极深蓝黑
+    'bg_alt':     RGBColor(0x10, 0x17, 0x29),   # 微亮背景
+
+    # 30% - 中间层
+    'surface':    RGBColor(0x16, 0x1F, 0x35),   # 卡片/区块
+    'surface2':   RGBColor(0x1C, 0x28, 0x42),   # 次级卡片
+    'border':     RGBColor(0x25, 0x33, 0x50),   # 边框/分割线
+
+    # 文字层级（对比原则：4级层次）
+    'text_primary':   RGBColor(0xF0, 0xF4, 0xFC),  # 主文字 - 最亮白
+    'text_secondary': RGBColor(0xA0, 0xAE, 0xC4),  # 次文字
+    'text_tertiary':  RGBColor(0x60, 0x70, 0x90),  # 辅助文字
+    'text_disabled':  RGBColor(0x3A, 0x48, 0x60),  # 装饰文字
+
+    # 10% - 强调色（每个模块不同，这里定义调色板）
+    'cyan':       RGBColor(0x00, 0xC8, 0xF0),   # 科技青
+    'violet':     RGBColor(0x8B, 0x5C, 0xF6),   # 紫罗兰
+    'orange':     RGBColor(0xF0, 0x7A, 0x35),   # 活力橙
+    'emerald':    RGBColor(0x10, 0xB9, 0x81),   # 翡翠绿
+    'amber':      RGBColor(0xF5, 0x9E, 0x0B),   # 琥珀黄
+    'rose':       RGBColor(0xF4, 0x3F, 0x5E),   # 玫瑰红
 }
 
-SLIDE_WIDTH = Inches(13.333)
-SLIDE_HEIGHT = Inches(7.5)
-OUTPUT_DIR = '/root/.openclaw/workspace/ai-video-class/AI漫剧制作课程/PPT课件'
-
-# 模块主题色
-MODULE_COLORS = [
-    COLORS['accent'],    # 0-导论
-    COLORS['accent3'],   # 1-行业
-    COLORS['accent'],    # 2-LLM
-    COLORS['accent2'],   # 3-分镜
-    COLORS['accent3'],   # 4-即梦
-    COLORS['accent4'],   # 5-其他工具
-    COLORS['accent'],    # 6-可灵
-    COLORS['accent2'],   # 7-Seedance
-    COLORS['accent5'],   # 8-海螺
-    COLORS['accent6'],   # 9-角色一致
-    COLORS['accent4'],   # 10-音频
-    COLORS['accent3'],   # 11-剪辑
-    COLORS['accent'],    # 12-一站式
-    COLORS['accent2'],   # 13-ComfyUI
-    COLORS['accent5'],   # 14-工业化
-    COLORS['accent4'],   # 15-变现
-    COLORS['accent6'],   # 16-合规
-    COLORS['accent3'],   # 17-实战
+# 模块强调色映射
+MODULE_ACCENTS = [
+    C['cyan'], C['orange'], C['cyan'], C['violet'],
+    C['orange'], C['emerald'], C['cyan'], C['violet'],
+    C['amber'], C['rose'], C['emerald'], C['orange'],
+    C['cyan'], C['violet'], C['amber'], C['emerald'],
+    C['rose'], C['orange'],
 ]
 
+# 排版系统（对比原则：字号梯度）
+FONT = {
+    'display':  48,   # 展示级 - 封面大标题
+    'h1':       32,   # 一级标题
+    'h2':       24,   # 二级标题
+    'h3':       18,   # 三级标题
+    'body':     14,   # 正文
+    'caption':  11,   # 辅助说明
+    'micro':    9,    # 极小标注
+}
 
-def get_module_color(num):
-    if 0 <= num < len(MODULE_COLORS):
-        return MODULE_COLORS[num]
-    return COLORS['accent']
+# 网格系统（Alignment原则：统一边距）
+MARGIN_L = Inches(0.8)
+MARGIN_R = Inches(0.8)
+MARGIN_T = Inches(0.6)
+CONTENT_W = Inches(11.733)  # 13.333 - 0.8*2
+SLIDE_W = Inches(13.333)
+SLIDE_H = Inches(7.5)
 
+OUTPUT_DIR = '/root/.openclaw/workspace/ai-video-class/AI漫剧制作课程/PPT课件'
 
 # ══════════════════════════════════════════════
 # 基础图形工具
 # ══════════════════════════════════════════════
 
-def set_slide_bg(slide, color):
+def _acc(num):
+    """获取模块强调色"""
+    if 0 <= num < len(MODULE_ACCENTS):
+        return MODULE_ACCENTS[num]
+    return C['cyan']
+
+
+def set_bg(slide, color=None):
     bg = slide.background
     fill = bg.fill
     fill.solid()
-    fill.fore_color.rgb = color
+    fill.fore_color.rgb = color or C['bg']
 
 
-def add_shape(slide, left, top, width, height, fill_color=None, border_color=None, border_width=Pt(0)):
-    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
-    shape.line.fill.background()
-    if fill_color:
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = fill_color
+def rect(slide, x, y, w, h, fill=None, border=None, border_w=Pt(1)):
+    s = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, y, w, h)
+    s.line.fill.background()
+    if fill:
+        s.fill.solid()
+        s.fill.fore_color.rgb = fill
     else:
-        shape.fill.background()
-    if border_color:
-        shape.line.color.rgb = border_color
-        shape.line.width = border_width
-    return shape
+        s.fill.background()
+    if border:
+        s.line.color.rgb = border
+        s.line.width = border_w
+    return s
 
 
-def add_rounded_rect(slide, left, top, width, height, fill_color=None, border_color=None):
-    shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
-    shape.line.fill.background()
-    if fill_color:
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = fill_color
+def rrect(slide, x, y, w, h, fill=None, border=None):
+    s = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, w, h)
+    s.line.fill.background()
+    if fill:
+        s.fill.solid()
+        s.fill.fore_color.rgb = fill
     else:
-        shape.fill.background()
-    if border_color:
-        shape.line.color.rgb = border_color
-        shape.line.width = Pt(1.5)
-    return shape
+        s.fill.background()
+    if border:
+        s.line.color.rgb = border
+        s.line.width = Pt(1)
+    return s
 
 
-def add_circle(slide, left, top, size, fill_color=None):
-    shape = slide.shapes.add_shape(MSO_SHAPE.OVAL, left, top, size, size)
-    shape.line.fill.background()
-    if fill_color:
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = fill_color
-    else:
-        shape.fill.background()
-    return shape
+def circle(slide, x, y, size, fill=None):
+    s = slide.shapes.add_shape(MSO_SHAPE.OVAL, x, y, size, size)
+    s.line.fill.background()
+    if fill:
+        s.fill.solid()
+        s.fill.fore_color.rgb = fill
+    return s
 
 
-def add_text_box(slide, left, top, width, height, text, font_size=18, color=None, bold=False,
-                 alignment=PP_ALIGN.LEFT, font_name='Microsoft YaHei'):
-    txBox = slide.shapes.add_textbox(left, top, width, height)
-    tf = txBox.text_frame
+def txt(slide, x, y, w, h, text, size=14, color=None, bold=False, align=PP_ALIGN.LEFT, font='Microsoft YaHei'):
+    """单行文本框"""
+    tb = slide.shapes.add_textbox(x, y, w, h)
+    tf = tb.text_frame
     tf.word_wrap = True
     p = tf.paragraphs[0]
-    p.text = text
-    p.font.size = Pt(font_size)
-    p.font.color.rgb = color or COLORS['text_white']
+    p.text = str(text)
+    p.font.size = Pt(size)
+    p.font.color.rgb = color or C['text_primary']
     p.font.bold = bold
-    p.font.name = font_name
-    p.alignment = alignment
-    return txBox
+    p.font.name = font
+    p.alignment = align
+    return tb
 
 
-def add_multi_text(slide, left, top, width, height, lines, font_size=16, color=None,
-                   line_spacing=1.5, bullet_color=None):
-    txBox = slide.shapes.add_textbox(left, top, width, height)
-    tf = txBox.text_frame
+def multiline(slide, x, y, w, h, lines, size=14, color=None, spacing=1.3):
+    """多行文本（Proximity原则：紧凑分组）"""
+    tb = slide.shapes.add_textbox(x, y, w, h)
+    tf = tb.text_frame
     tf.word_wrap = True
     for i, line in enumerate(lines):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
-        if line.strip():
-            p.text = f"▸ {line}"
-        else:
-            p.text = line
-        p.font.size = Pt(font_size)
-        p.font.color.rgb = color or COLORS['text_light']
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.text = f"▸ {line}" if line.strip() else line
+        p.font.size = Pt(size)
+        p.font.color.rgb = color or C['text_secondary']
         p.font.name = 'Microsoft YaHei'
-        p.space_after = Pt(font_size * 0.5)
-        # 设置 bullet 颜色需要通过 XML
-        if bullet_color and line.strip():
-            run = p.runs[0] if p.runs else None
-            if run:
-                rPr = run._r.get_or_add_rPr()
-                solidFill = rPr.makeelement(qn('a:solidFill'), {})
-                srgb = solidFill.makeelement(qn('a:srgbClr'), {'val': '%02X%02X%02X' % (bullet_color[0], bullet_color[1], bullet_color[2]) if isinstance(bullet_color, tuple) else '00D4FF'})
-                solidFill.append(srgb)
-    return txBox
+        p.space_after = Pt(size * 0.4)
+    return tb
 
 
-def add_accent_line(slide, left, top, width, color=None):
-    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, Pt(3))
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = color or COLORS['accent']
-    shape.line.fill.background()
-    return shape
+def line(slide, x, y, w, color=None, thickness=Pt(2)):
+    return rect(slide, x, y, w, thickness, fill=color or C['border'])
 
 
-def add_footer(slide, module_num, module_name, page_num):
-    add_shape(slide, Inches(0), Inches(7.05), SLIDE_WIDTH, Pt(1.5), fill_color=COLORS['border'])
-    add_text_box(slide, Inches(0.5), Inches(7.1), Inches(6), Inches(0.3),
-                 f"模块{module_num:02d}：{module_name}", font_size=9, color=COLORS['text_dim'])
-    add_text_box(slide, Inches(11.5), Inches(7.1), Inches(1.5), Inches(0.3),
-                 str(page_num), font_size=9, color=COLORS['text_dim'], alignment=PP_ALIGN.RIGHT)
+# ══════════════════════════════════════════════
+# 页面结构组件
+# ══════════════════════════════════════════════
+
+def page_footer(slide, mod_num, mod_name, page_num, accent):
+    """统一页脚（Repetition原则：每页重复）"""
+    line(slide, Inches(0), Inches(7.05), SLIDE_W, C['border'], Pt(1))
+    txt(slide, Inches(0.8), Inches(7.1), Inches(5), Inches(0.3),
+        f"模块{mod_num:02d} · {mod_name}", FONT['micro'], C['text_tertiary'])
+    txt(slide, Inches(11.5), Inches(7.1), Inches(1.5), Inches(0.3),
+        str(page_num), FONT['micro'], C['text_tertiary'], align=PP_ALIGN.RIGHT)
 
 
-def add_corner_decoration(slide, color=None):
-    """右上角装饰几何"""
-    c = color or COLORS['accent']
-    # 小三角装饰
-    add_shape(slide, Inches(12.0), Inches(0), Inches(1.333), Inches(0.08), fill_color=c)
-    add_shape(slide, Inches(13.18), Inches(0), Inches(0.15), Inches(1.0), fill_color=c)
-
-
-def add_page_header(slide, title, accent_color=None):
-    """统一页面标题区"""
-    c = accent_color or COLORS['accent']
-    # 标题背景条
-    add_shape(slide, Inches(0), Inches(0), SLIDE_WIDTH, Inches(1.15), fill_color=COLORS['bg_card'])
-    # 左侧色条
-    add_shape(slide, Inches(0), Inches(0), Inches(0.12), Inches(1.15), fill_color=c)
+def page_header(slide, title, accent, icon=""):
+    """统一页面头部（Repetition原则）"""
+    # 顶部强调线
+    rect(slide, Inches(0), Inches(0), SLIDE_W, Pt(3), fill=accent)
+    # 标题区背景
+    rect(slide, Inches(0), Pt(3), SLIDE_W, Inches(1.0), fill=C['surface'])
+    # 左侧强调块
+    rect(slide, Inches(0), Pt(3), Inches(0.1), Inches(1.0), fill=accent)
     # 标题文字
-    add_text_box(slide, Inches(0.6), Inches(0.2), Inches(11), Inches(0.7),
-                 title, font_size=26, color=COLORS['text_white'], bold=True)
-    # 底部线
-    add_shape(slide, Inches(0), Inches(1.15), SLIDE_WIDTH, Pt(2), fill_color=c)
+    label = f"{icon} {title}" if icon else title
+    txt(slide, MARGIN_L, Inches(0.15), CONTENT_W, Inches(0.7),
+        label, FONT['h2'], C['text_primary'], bold=True)
+    # 底部分割线
+    line(slide, Inches(0), Inches(1.18), SLIDE_W, C['border'], Pt(1))
 
 
 # ══════════════════════════════════════════════
-# 幻灯片类型 - 高级版
+# 幻灯片类型
 # ══════════════════════════════════════════════
 
-def make_title_slide(prs, title, subtitle, module_num=0):
-    """封面页 - 全新设计"""
+def make_cover(prs, title, subtitle, mod_num=0):
+    """封面页 - 大留白 + 大对比 + 几何装饰"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    c = get_module_color(module_num)
+    # ── 左侧色块（60-30-10 中的 10%）──
+    rect(slide, Inches(0), Inches(0), Inches(5.2), SLIDE_H, fill=accent)
 
-    # 左侧大色块
-    add_shape(slide, Inches(0), Inches(0), Inches(5.5), SLIDE_HEIGHT, fill_color=c)
+    # 左上角极细白线装饰（Alignment原则）
+    rect(slide, Inches(0), Inches(0), Inches(5.2), Pt(2), fill=C['text_primary'])
+    rect(slide, Inches(0), Inches(0), Pt(2), SLIDE_H, fill=C['text_primary'])
 
-    # 左上角几何装饰
-    add_shape(slide, Inches(0), Inches(0), Inches(5.5), Inches(0.12), fill_color=COLORS['text_white'])
-    add_shape(slide, Inches(0), Inches(0), Inches(0.12), Inches(7.5), fill_color=COLORS['text_white'])
-
-    # 模块编号（大号）
-    if module_num > 0:
-        add_text_box(slide, Inches(0.5), Inches(1.5), Inches(4.5), Inches(2.5),
-                     f"{module_num:02d}", font_size=140, color=RGBColor(0xFF, 0xFF, 0xFF), bold=True)
-        # MODULE 标签
-        add_text_box(slide, Inches(0.6), Inches(4.0), Inches(4), Inches(0.5),
-                     "M O D U L E", font_size=14, color=RGBColor(0xFF, 0xFF, 0xFF))
+    # 大号模块编号（Contrast原则：超大字号形成视觉锚点）
+    if mod_num > 0:
+        txt(slide, Inches(0.6), Inches(1.2), Inches(4.0), Inches(2.8),
+            f"{mod_num:02d}", 120, C['text_primary'], bold=True)
+        # MODULE 标签（Repetition: 固定标签格式）
+        txt(slide, Inches(0.7), Inches(3.8), Inches(3), Inches(0.4),
+            "M O D U L E", 12, C['text_primary'])
+        # 细装饰线
+        rect(slide, Inches(0.7), Inches(4.3), Inches(1.5), Pt(1.5), fill=C['text_primary'])
     else:
-        # 导论页大图标
-        add_text_box(slide, Inches(0.5), Inches(2.0), Inches(4.5), Inches(2.0),
-                     "🎬", font_size=100, color=RGBColor(0xFF, 0xFF, 0xFF), alignment=PP_ALIGN.CENTER)
+        txt(slide, Inches(0.6), Inches(1.8), Inches(4.0), Inches(2.5),
+            "🎬", 80, C['text_primary'], align=PP_ALIGN.CENTER)
 
-    # 右侧内容区
-    # 课程标识
-    add_rounded_rect(slide, Inches(6.2), Inches(1.5), Inches(6.5), Inches(0.5), fill_color=c)
-    add_text_box(slide, Inches(6.4), Inches(1.5), Inches(6), Inches(0.5),
-                 "AI漫剧制作全流程课程 · 2026版", font_size=12, color=COLORS['text_white'],
-                 alignment=PP_ALIGN.CENTER)
+    # ── 右侧内容区（大量留白）──
+    # 课程标签
+    rrect(slide, Inches(6.0), Inches(1.5), Inches(6.5), Inches(0.45), fill=accent)
+    txt(slide, Inches(6.2), Inches(1.5), Inches(6.1), Inches(0.45),
+        "AI漫剧制作全流程课程 · 2026版", 11, C['text_primary'], align=PP_ALIGN.CENTER)
 
-    # 主标题
-    add_text_box(slide, Inches(6.2), Inches(2.5), Inches(6.5), Inches(1.8),
-                 title, font_size=36, color=COLORS['text_white'], bold=True)
+    # 主标题（Contrast: 大标题 vs 小副标题）
+    txt(slide, Inches(6.0), Inches(2.6), Inches(6.5), Inches(1.6),
+        title, FONT['display'] - 4, C['text_primary'], bold=True)
 
-    # 装饰线
-    add_accent_line(slide, Inches(6.2), Inches(4.4), Inches(3), color=c)
+    # 装饰线（Proximity: 紧贴标题下方）
+    line(slide, Inches(6.0), Inches(4.4), Inches(2.5), accent, Pt(3))
 
     # 副标题
-    add_text_box(slide, Inches(6.2), Inches(4.8), Inches(6.5), Inches(1.0),
-                 subtitle, font_size=18, color=COLORS['text_light'])
+    txt(slide, Inches(6.0), Inches(4.8), Inches(6.5), Inches(0.8),
+        subtitle, FONT['body'] + 2, C['text_secondary'])
 
-    # 底部统计条
-    add_shape(slide, Inches(6.2), Inches(6.2), Inches(6.5), Inches(0.7), fill_color=COLORS['bg_card'])
+    # 底部统计条（Repetition: 固定格式的信息条）
+    rect(slide, Inches(6.0), Inches(6.0), Inches(6.5), Inches(0.65), fill=C['surface'])
     stats = ["124课时", "17模块", "8-16周", "全流程"]
-    for i, stat in enumerate(stats):
-        x = Inches(6.4) + Inches(i * 1.6)
-        add_text_box(slide, x, Inches(6.25), Inches(1.5), Inches(0.6),
-                     stat, font_size=12, color=c, bold=True, alignment=PP_ALIGN.CENTER)
+    for i, s in enumerate(stats):
+        x = Inches(6.2) + Inches(i * 1.6)
+        txt(slide, x, Inches(6.05), Inches(1.4), Inches(0.55),
+            s, FONT['caption'], accent, bold=True, align=PP_ALIGN.CENTER)
 
 
-def make_toc_slide(prs, items, module_num, module_name, page_num):
-    """目录页 - 网格卡片布局"""
+def make_toc(prs, items, mod_num, mod_name, page_num):
+    """目录页 - 网格卡片（Alignment: 网格对齐）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, "📋 本节内容", c)
+    page_header(slide, "本节内容", accent, "📋")
 
-    # 网格卡片（3列）
+    # 3列网格（Proximity: 相关项分组）
     cols = 3
     card_w = Inches(3.7)
-    card_h = Inches(1.1)
-    gap_x = Inches(0.35)
-    gap_y = Inches(0.25)
-    start_x = Inches(0.6)
-    start_y = Inches(1.5)
+    card_h = Inches(1.05)
+    gap = Inches(0.3)
+    sx = Inches(0.65)
+    sy = Inches(1.5)
 
     for i, item in enumerate(items):
-        col = i % cols
-        row = i // cols
-        x = start_x + col * (card_w + gap_x)
-        y = start_y + row * (card_h + gap_y)
-
+        col, row = i % cols, i // cols
+        x = sx + col * (card_w + gap)
+        y = sy + row * (card_h + gap)
         if y > Inches(6.5):
             break
 
-        # 卡片背景
-        add_rounded_rect(slide, x, y, card_w, card_h, fill_color=COLORS['bg_card'], border_color=c)
-        # 编号圆
-        add_circle(slide, x + Inches(0.15), y + Inches(0.25), Inches(0.5), fill_color=c)
-        add_text_box(slide, x + Inches(0.15), y + Inches(0.25), Inches(0.5), Inches(0.5),
-                     str(i + 1), font_size=14, color=COLORS['text_white'], bold=True,
-                     alignment=PP_ALIGN.CENTER)
+        # 卡片（Contrast: 卡片与背景对比）
+        rrect(slide, x, y, card_w, card_h, fill=C['surface'], border=C['border'])
+        # 编号
+        circle(slide, x + Inches(0.12), y + Inches(0.22), Inches(0.45), fill=accent)
+        txt(slide, x + Inches(0.12), y + Inches(0.22), Inches(0.45), Inches(0.45),
+            str(i + 1), 12, C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
         # 文字
-        add_text_box(slide, x + Inches(0.8), y + Inches(0.2), Inches(2.7), Inches(0.7),
-                     item, font_size=13, color=COLORS['text_light'])
+        txt(slide, x + Inches(0.7), y + Inches(0.18), Inches(2.8), Inches(0.65),
+            item, FONT['caption'] + 1, C['text_secondary'])
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_content_slide(prs, title, bullets, module_num, module_name, page_num, accent_color=None):
-    """标准内容页 - 增强版"""
+def make_content(prs, title, bullets, mod_num, mod_name, page_num):
+    """内容页 - 逐条卡片（Contrast + Proximity）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = accent_color or get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, title, c)
+    page_header(slide, title, accent)
 
-    # 内容区 - 每个bullet一个卡片
+    n = len(bullets)
+    # 动态计算间距（Alignment: 均匀分布）
+    max_y = Inches(6.6)
+    available = max_y - Inches(1.4)
+    card_h = min(Inches(0.75), available / max(n, 1) - Inches(0.1))
+    gap = (available - card_h * n) / max(n - 1, 1) if n > 1 else Inches(0)
+
     for i, bullet in enumerate(bullets):
-        y = Inches(1.45) + Inches(i * 0.95)
-        if y > Inches(6.5):
+        y = Inches(1.4) + i * (card_h + gap)
+        if y + card_h > max_y:
             break
 
         # 卡片
-        add_rounded_rect(slide, Inches(0.5), y, Inches(12.3), Inches(0.8),
-                         fill_color=COLORS['bg_card'])
-        # 左侧色条
-        add_shape(slide, Inches(0.5), y, Inches(0.08), Inches(0.8), fill_color=c)
-        # 要点标记
-        add_circle(slide, Inches(0.8), y + Inches(0.18), Inches(0.4), fill_color=c)
-        add_text_box(slide, Inches(0.8), y + Inches(0.18), Inches(0.4), Inches(0.4),
-                     str(i + 1), font_size=11, color=COLORS['text_white'], bold=True,
-                     alignment=PP_ALIGN.CENTER)
-        # 文字
-        add_text_box(slide, Inches(1.4), y + Inches(0.1), Inches(11), Inches(0.6),
-                     bullet, font_size=15, color=COLORS['text_light'])
+        rrect(slide, Inches(0.5), y, Inches(12.3), card_h, fill=C['surface'])
+        # 左侧色条（Repetition: 每张卡片重复）
+        rect(slide, Inches(0.5), y, Inches(0.06), card_h, fill=accent)
+        # 编号
+        circle(slide, Inches(0.75), y + (card_h - Inches(0.35)) / 2, Inches(0.35), fill=accent)
+        txt(slide, Inches(0.75), y + (card_h - Inches(0.35)) / 2, Inches(0.35), Inches(0.35),
+            str(i + 1), 10, C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
+        # 文字（Proximity: 文字紧邻编号）
+        txt(slide, Inches(1.3), y + (card_h - Inches(0.4)) / 2, Inches(11), Inches(0.4),
+            bullet, FONT['body'], C['text_secondary'])
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_stat_cards_slide(prs, title, stats, module_num, module_name, page_num):
-    """数据统计卡片页 - 大数字展示"""
+def make_stat_cards(prs, title, stats, mod_num, mod_name, page_num):
+    """数据卡片页 - 大数字（Contrast原则的极致体现）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, title, c)
+    page_header(slide, title, accent, "📊")
 
-    cols = min(len(stats), 4)
-    card_w = Inches(12.3 / cols - 0.3)
-    start_x = Inches(0.5)
-    card_y = Inches(1.6)
+    n = min(len(stats), 4)
+    card_w = Inches(12.3 / n - 0.2)
+    gap = Inches(0.25)
+    sx = Inches(0.5)
+    card_y = Inches(1.5)
     card_h = Inches(5.2)
 
-    stat_colors = [COLORS['accent'], COLORS['accent2'], COLORS['accent3'], COLORS['accent4'],
-                   COLORS['accent5'], COLORS['accent6']]
+    palette = [C['cyan'], C['violet'], C['orange'], C['emerald'], C['amber'], C['rose']]
 
-    for i, stat in enumerate(stats[:cols]):
-        x = start_x + i * (card_w + Inches(0.3))
-        sc = stat_colors[i % len(stat_colors)]
+    for i, stat in enumerate(stats[:n]):
+        x = sx + i * (card_w + gap)
+        sc = palette[i % len(palette)]
 
-        # 大卡片
-        add_rounded_rect(slide, x, card_y, card_w, card_h, fill_color=COLORS['bg_card'])
-        # 顶部色条
-        add_shape(slide, x, card_y, card_w, Inches(0.08), fill_color=sc)
+        # 卡片
+        rrect(slide, x, card_y, card_w, card_h, fill=C['surface'])
+        # 顶部色线（Repetition）
+        rect(slide, x, card_y, card_w, Pt(3), fill=sc)
 
-        # 大数字
-        add_text_box(slide, x + Inches(0.2), card_y + Inches(0.5), card_w - Inches(0.4), Inches(1.5),
-                     stat.get('value', ''), font_size=48, color=sc, bold=True,
-                     alignment=PP_ALIGN.CENTER)
+        # 大数字（Contrast: 48pt数字 vs 11pt标签）
+        txt(slide, x + Inches(0.15), card_y + Inches(0.6), card_w - Inches(0.3), Inches(1.2),
+            stat.get('value', ''), 52, sc, bold=True, align=PP_ALIGN.CENTER)
 
         # 单位
         if stat.get('unit'):
-            add_text_box(slide, x + Inches(0.2), card_y + Inches(1.8), card_w - Inches(0.4), Inches(0.4),
-                         stat['unit'], font_size=16, color=COLORS['text_dim'],
-                         alignment=PP_ALIGN.CENTER)
+            txt(slide, x + Inches(0.15), card_y + Inches(1.7), card_w - Inches(0.3), Inches(0.35),
+                stat['unit'], FONT['body'], C['text_tertiary'], align=PP_ALIGN.CENTER)
+
+        # 分割线
+        line(slide, x + Inches(0.4), card_y + Inches(2.2), card_w - Inches(0.8), C['border'], Pt(1))
 
         # 标签
-        add_text_box(slide, x + Inches(0.2), card_y + Inches(2.3), card_w - Inches(0.4), Inches(0.5),
-                     stat.get('label', ''), font_size=16, color=COLORS['text_white'], bold=True,
-                     alignment=PP_ALIGN.CENTER)
+        txt(slide, x + Inches(0.15), card_y + Inches(2.5), card_w - Inches(0.3), Inches(0.4),
+            stat.get('label', ''), FONT['body'], C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
 
         # 描述
         if stat.get('desc'):
-            add_text_box(slide, x + Inches(0.3), card_y + Inches(3.0), card_w - Inches(0.6), Inches(1.5),
-                         stat['desc'], font_size=12, color=COLORS['text_dim'],
-                         alignment=PP_ALIGN.CENTER)
+            txt(slide, x + Inches(0.2), card_y + Inches(3.1), card_w - Inches(0.4), Inches(1.2),
+                stat['desc'], FONT['caption'], C['text_tertiary'], align=PP_ALIGN.CENTER)
 
-        # 趋势
+        # 趋势标签
         if stat.get('trend'):
-            trend_color = COLORS['accent4'] if '↑' in stat['trend'] or '+' in stat['trend'] else COLORS['accent6']
-            add_rounded_rect(slide, x + Inches(0.3), card_y + Inches(4.5), card_w - Inches(0.6), Inches(0.4),
-                             fill_color=COLORS['bg_card2'])
-            add_text_box(slide, x + Inches(0.3), card_y + Inches(4.5), card_w - Inches(0.6), Inches(0.4),
-                         stat['trend'], font_size=13, color=trend_color, bold=True,
-                         alignment=PP_ALIGN.CENTER)
+            is_up = any(c in stat['trend'] for c in ['↑', '+'])
+            tc = C['emerald'] if is_up else C['rose']
+            rrect(slide, x + Inches(0.3), card_y + Inches(4.4), card_w - Inches(0.6), Inches(0.35),
+                  fill=C['bg_alt'])
+            txt(slide, x + Inches(0.3), card_y + Inches(4.4), card_w - Inches(0.6), Inches(0.35),
+                stat['trend'], FONT['caption'], tc, bold=True, align=PP_ALIGN.CENTER)
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_two_col_slide(prs, title, left_title, left_items, right_title, right_items,
-                       module_num, module_name, page_num):
-    """双栏对比页 - 增强版"""
+def make_two_col(prs, title, left_title, left_items, right_title, right_items,
+                 mod_num, mod_name, page_num):
+    """双栏对比页（Contrast: 左右对比）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, title, c)
+    page_header(slide, title, accent)
 
-    # 左栏卡片
-    add_rounded_rect(slide, Inches(0.4), Inches(1.5), Inches(6.0), Inches(5.3),
-                     fill_color=COLORS['bg_card'])
-    add_shape(slide, Inches(0.4), Inches(1.5), Inches(6.0), Inches(0.08), fill_color=c)
-    add_text_box(slide, Inches(0.7), Inches(1.8), Inches(5.4), Inches(0.5),
-                 left_title, font_size=20, color=c, bold=True)
-    add_accent_line(slide, Inches(0.7), Inches(2.4), Inches(1.5), color=c)
+    col_w = Inches(5.85)
+    col_h = Inches(5.2)
+    col_y = Inches(1.5)
+
+    # 左栏
+    rrect(slide, Inches(0.5), col_y, col_w, col_h, fill=C['surface'])
+    rect(slide, Inches(0.5), col_y, col_w, Pt(3), fill=accent)
+    txt(slide, Inches(0.8), col_y + Inches(0.25), Inches(5.2), Inches(0.45),
+        left_title, FONT['h3'], accent, bold=True)
+    line(slide, Inches(0.8), col_y + Inches(0.8), Inches(1.2), accent, Pt(2))
 
     for i, item in enumerate(left_items):
-        y = Inches(2.7) + Inches(i * 0.65)
-        if y > Inches(6.4):
+        iy = col_y + Inches(1.1) + i * Inches(0.55)
+        if iy > col_y + col_h - Inches(0.3):
             break
-        # 小圆点
-        add_circle(slide, Inches(0.8), y + Inches(0.08), Inches(0.2), fill_color=c)
-        add_text_box(slide, Inches(1.15), y, Inches(5), Inches(0.55),
-                     item, font_size=14, color=COLORS['text_light'])
+        circle(slide, Inches(0.8), iy + Inches(0.06), Inches(0.18), fill=accent)
+        txt(slide, Inches(1.15), iy, Inches(5.0), Inches(0.45),
+            item, FONT['body'], C['text_secondary'])
 
-    # 右栏卡片
-    add_rounded_rect(slide, Inches(6.8), Inches(1.5), Inches(6.0), Inches(5.3),
-                     fill_color=COLORS['bg_card'])
-    add_shape(slide, Inches(6.8), Inches(1.5), Inches(6.0), Inches(0.08), fill_color=COLORS['accent2'])
-    add_text_box(slide, Inches(7.1), Inches(1.8), Inches(5.4), Inches(0.5),
-                 right_title, font_size=20, color=COLORS['accent2'], bold=True)
-    add_accent_line(slide, Inches(7.1), Inches(2.4), Inches(1.5), color=COLORS['accent2'])
+    # 右栏
+    rrect(slide, Inches(6.85), col_y, col_w, col_h, fill=C['surface'])
+    rect(slide, Inches(6.85), col_y, col_w, Pt(3), fill=C['violet'])
+    txt(slide, Inches(7.15), col_y + Inches(0.25), Inches(5.2), Inches(0.45),
+        right_title, FONT['h3'], C['violet'], bold=True)
+    line(slide, Inches(7.15), col_y + Inches(0.8), Inches(1.2), C['violet'], Pt(2))
 
     for i, item in enumerate(right_items):
-        y = Inches(2.7) + Inches(i * 0.65)
-        if y > Inches(6.4):
+        iy = col_y + Inches(1.1) + i * Inches(0.55)
+        if iy > col_y + col_h - Inches(0.3):
             break
-        add_circle(slide, Inches(7.2), y + Inches(0.08), Inches(0.2), fill_color=COLORS['accent2'])
-        add_text_box(slide, Inches(7.55), y, Inches(5), Inches(0.55),
-                     item, font_size=14, color=COLORS['text_light'])
+        circle(slide, Inches(7.15), iy + Inches(0.06), Inches(0.18), fill=C['violet'])
+        txt(slide, Inches(7.5), iy, Inches(5.0), Inches(0.45),
+            item, FONT['body'], C['text_secondary'])
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_table_slide(prs, title, headers, rows, module_num, module_name, page_num):
-    """表格页 - 增强版"""
+def make_table(prs, title, headers, rows, mod_num, mod_name, page_num):
+    """表格页（Alignment: 网格对齐）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, title, c)
+    page_header(slide, title, accent)
 
     cols = len(headers)
-    tbl_rows_count = len(rows) + 1
-    table_left = Inches(0.6)
-    table_top = Inches(1.6)
-    table_w = Inches(12.1)
-    row_h = Inches(0.65)
-    table_h = row_h * tbl_rows_count
+    n_rows = len(rows) + 1
+    tbl_left = Inches(0.6)
+    tbl_top = Inches(1.5)
+    tbl_w = Inches(12.1)
+    row_h = Inches(0.6)
 
-    table_shape = slide.shapes.add_table(tbl_rows_count, cols, table_left, table_top, table_w, table_h)
-    table = table_shape.table
-
-    col_w = table_w / cols
+    ts = slide.shapes.add_table(n_rows, cols, tbl_left, tbl_top, tbl_w, row_h * n_rows)
+    tbl = ts.table
+    col_w = tbl_w / cols
     for j in range(cols):
-        table.columns[j].width = int(col_w)
+        tbl.columns[j].width = int(col_w)
 
     # 表头
     for j, h in enumerate(headers):
-        cell = table.cell(0, j)
+        cell = tbl.cell(0, j)
         cell.text = h
         cell.fill.solid()
-        cell.fill.fore_color.rgb = c
+        cell.fill.fore_color.rgb = accent
         for p in cell.text_frame.paragraphs:
-            p.font.size = Pt(14)
-            p.font.color.rgb = COLORS['text_white']
+            p.font.size = Pt(13)
+            p.font.color.rgb = C['text_primary']
             p.font.bold = True
             p.font.name = 'Microsoft YaHei'
             p.alignment = PP_ALIGN.CENTER
         cell.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-    # 数据行
     for i, row in enumerate(rows):
         for j, val in enumerate(row):
-            cell = table.cell(i + 1, j)
+            cell = tbl.cell(i + 1, j)
             cell.text = str(val)
             cell.fill.solid()
-            cell.fill.fore_color.rgb = COLORS['bg_card'] if i % 2 == 0 else COLORS['bg_card2']
+            cell.fill.fore_color.rgb = C['surface'] if i % 2 == 0 else C['surface2']
             for p in cell.text_frame.paragraphs:
-                p.font.size = Pt(13)
-                p.font.color.rgb = COLORS['text_light']
+                p.font.size = Pt(12)
+                p.font.color.rgb = C['text_secondary']
                 p.font.name = 'Microsoft YaHei'
                 p.alignment = PP_ALIGN.CENTER
             cell.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_key_point_slide(prs, title, key_point, explanation, module_num, module_name, page_num):
-    """重点强调页 - 视觉焦点"""
+def make_key_point(prs, title, key_point, explanation, mod_num, mod_name, page_num):
+    """重点强调页（Contrast: 视觉焦点）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, title, c)
+    page_header(slide, title or "核心要点", accent, "💡")
 
-    # 大号重点卡片 - 居中
-    card_x = Inches(0.8)
-    card_y = Inches(1.8)
-    card_w = Inches(11.7)
-    card_h = Inches(3.0)
+    # 大号重点卡片
+    cx, cy = Inches(0.8), Inches(1.6)
+    cw, ch = Inches(11.7), Inches(3.2)
 
-    add_rounded_rect(slide, card_x, card_y, card_w, card_h, fill_color=COLORS['bg_card'])
-    # 顶部渐变色条
-    add_shape(slide, card_x, card_y, card_w, Inches(0.1), fill_color=c)
-    # 左侧大色块
-    add_shape(slide, card_x, card_y, Inches(0.12), card_h, fill_color=c)
+    rrect(slide, cx, cy, cw, ch, fill=C['surface'])
+    # 顶部+左侧双色条（Contrast: 强调）
+    rect(slide, cx, cy, cw, Pt(4), fill=accent)
+    rect(slide, cx, cy, Pt(5), ch, fill=accent)
 
-    # 💡 图标
-    add_text_box(slide, card_x + Inches(0.4), card_y + Inches(0.3), Inches(1), Inches(0.6),
-                 "💡", font_size=32, color=c)
-    add_text_box(slide, card_x + Inches(1.0), card_y + Inches(0.35), Inches(3), Inches(0.5),
-                 "核心要点", font_size=16, color=c, bold=True)
+    # 核心要点文字（大字号，高对比）
+    txt(slide, cx + Inches(0.5), cy + Inches(0.5), cw - Inches(1.0), Inches(2.2),
+        key_point, FONT['h1'], C['text_primary'], bold=True)
 
-    # 重点文字
-    add_text_box(slide, card_x + Inches(0.5), card_y + Inches(1.0), card_w - Inches(1.0), Inches(1.5),
-                 key_point, font_size=24, color=COLORS['text_white'], bold=True)
+    # 说明区（Proximity: 紧贴重点卡片下方）
+    rrect(slide, Inches(0.8), Inches(5.1), Inches(11.7), Inches(1.6), fill=C['surface2'])
+    rect(slide, Inches(0.8), Inches(5.1), Pt(4), Inches(1.6), fill=C['text_tertiary'])
+    txt(slide, Inches(1.3), Inches(5.25), Inches(10.8), Inches(1.3),
+        explanation, FONT['body'], C['text_secondary'])
 
-    # 说明区
-    add_rounded_rect(slide, Inches(0.8), Inches(5.2), Inches(11.7), Inches(1.5),
-                     fill_color=COLORS['bg_card2'])
-    add_shape(slide, Inches(0.8), Inches(5.2), Inches(0.08), Inches(1.5), fill_color=COLORS['text_dim'])
-    add_text_box(slide, Inches(1.2), Inches(5.35), Inches(11), Inches(1.2),
-                 explanation, font_size=14, color=COLORS['text_light'])
-
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_step_slide(prs, title, steps, module_num, module_name, page_num):
-    """步骤流程页 - 带连接线"""
+def make_steps(prs, title, steps, mod_num, mod_name, page_num):
+    """步骤流程页（Alignment + Proximity）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, title, c)
+    page_header(slide, title, accent)
 
-    step_colors = [COLORS['accent'], COLORS['accent2'], COLORS['accent3'],
-                   COLORS['accent4'], COLORS['accent5'], COLORS['accent6']]
-
+    palette = [C['cyan'], C['violet'], C['orange'], C['emerald'], C['amber'], C['rose']]
     n = len(steps)
+
     if n <= 4:
-        # 横排卡片
-        card_w = Inches(12.3 / n - 0.25)
+        # 横排卡片（Alignment: 等宽等距）
+        card_w = Inches(12.3 / n - 0.2)
         card_h = Inches(5.0)
-        start_x = Inches(0.5)
-        card_y = Inches(1.5)
+        sx = Inches(0.5)
+        gap = Inches(0.25)
 
         for i, step in enumerate(steps):
-            x = start_x + i * (card_w + Inches(0.3))
-            sc = step_colors[i % len(step_colors)]
+            x = sx + i * (card_w + gap)
+            sc = palette[i % len(palette)]
 
-            add_rounded_rect(slide, x, card_y, card_w, card_h, fill_color=COLORS['bg_card'])
-            add_shape(slide, x, card_y, card_w, Inches(0.08), fill_color=sc)
+            rrect(slide, x, Inches(1.5), card_w, card_h, fill=C['surface'])
+            rect(slide, x, Inches(1.5), card_w, Pt(3), fill=sc)
 
             # 编号圆
-            add_circle(slide, x + card_w / 2 - Inches(0.3), card_y + Inches(0.4), Inches(0.6), fill_color=sc)
-            add_text_box(slide, x + card_w / 2 - Inches(0.3), card_y + Inches(0.4), Inches(0.6), Inches(0.6),
-                         str(i + 1), font_size=18, color=COLORS['text_white'], bold=True,
-                         alignment=PP_ALIGN.CENTER)
+            circle_size = Inches(0.55)
+            cx = x + (card_w - circle_size) / 2
+            circle(slide, cx, Inches(2.0), circle_size, fill=sc)
+            txt(slide, cx, Inches(2.0), circle_size, circle_size,
+                str(i + 1), 16, C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
 
             # 步骤文字
-            add_text_box(slide, x + Inches(0.2), card_y + Inches(1.3), card_w - Inches(0.4), Inches(3.5),
-                         step, font_size=14, color=COLORS['text_light'])
+            txt(slide, x + Inches(0.2), Inches(2.8), card_w - Inches(0.4), Inches(3.5),
+                step, FONT['body'], C['text_secondary'])
 
-            # 连接箭头（非最后一步）
+            # 连接箭头
             if i < n - 1:
-                arrow_x = x + card_w + Inches(0.02)
-                add_text_box(slide, arrow_x, card_y + card_h / 2 - Inches(0.2), Inches(0.25), Inches(0.4),
-                             "→", font_size=18, color=sc, bold=True)
+                ax = x + card_w + Inches(0.02)
+                txt(slide, ax, Inches(3.8), Inches(0.2), Inches(0.4),
+                    "›", 20, sc, bold=True, align=PP_ALIGN.CENTER)
     else:
-        # 竖排步骤
+        # 竖排（Proximity: 步骤紧凑排列）
         for i, step in enumerate(steps):
-            y = Inches(1.5) + Inches(i * 0.9)
-            if y > Inches(6.5):
+            y = Inches(1.4) + i * Inches(0.88)
+            if y > Inches(6.4):
                 break
-            sc = step_colors[i % len(step_colors)]
+            sc = palette[i % len(palette)]
 
-            # 卡片
-            add_rounded_rect(slide, Inches(0.5), y, Inches(12.3), Inches(0.75),
-                             fill_color=COLORS['bg_card'])
-            add_shape(slide, Inches(0.5), y, Inches(0.08), Inches(0.75), fill_color=sc)
+            rrect(slide, Inches(0.5), y, Inches(12.3), Inches(0.72), fill=C['surface'])
+            rect(slide, Inches(0.5), y, Inches(0.06), Inches(0.72), fill=sc)
 
-            # 编号
-            add_circle(slide, Inches(0.8), y + Inches(0.12), Inches(0.45), fill_color=sc)
-            add_text_box(slide, Inches(0.8), y + Inches(0.12), Inches(0.45), Inches(0.45),
-                         str(i + 1), font_size=13, color=COLORS['text_white'], bold=True,
-                         alignment=PP_ALIGN.CENTER)
+            circle(slide, Inches(0.75), y + Inches(0.13), Inches(0.4), fill=sc)
+            txt(slide, Inches(0.75), y + Inches(0.13), Inches(0.4), Inches(0.4),
+                str(i + 1), 12, C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
 
-            # 步骤文字
-            add_text_box(slide, Inches(1.5), y + Inches(0.1), Inches(11), Inches(0.55),
-                         step, font_size=15, color=COLORS['text_light'])
+            txt(slide, Inches(1.35), y + Inches(0.1), Inches(11), Inches(0.5),
+                step, FONT['body'], C['text_secondary'])
 
-            # 连接线
-            if i < len(steps) - 1 and y + Inches(0.9) <= Inches(6.5):
-                add_shape(slide, Inches(1.0), y + Inches(0.75), Pt(2), Inches(0.15),
-                          fill_color=sc)
+            if i < n - 1 and y + Inches(0.88) <= Inches(6.4):
+                rect(slide, Inches(0.93), y + Inches(0.72), Pt(1.5), Inches(0.16), fill=sc)
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_practice_slide(prs, title, tasks, module_num, module_name, page_num):
-    """实操练习页 - 清单卡片"""
+def make_practice(prs, title, tasks, mod_num, mod_name, page_num):
+    """实操练习页"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = COLORS['accent4']  # 绿色
+    set_bg(slide, C['bg'])
+    accent = C['emerald']
 
-    add_page_header(slide, "🛠️ " + title, c)
+    page_header(slide, title, accent, "🛠️")
 
     for i, task in enumerate(tasks):
-        y = Inches(1.5) + Inches(i * 0.9)
-        if y > Inches(6.5):
+        y = Inches(1.4) + i * Inches(0.88)
+        if y > Inches(6.4):
             break
 
-        # 任务卡片
-        add_rounded_rect(slide, Inches(0.5), y, Inches(12.3), Inches(0.75),
-                         fill_color=COLORS['bg_card'])
+        rrect(slide, Inches(0.5), y, Inches(12.3), Inches(0.72), fill=C['surface'])
         # checkbox
-        add_rounded_rect(slide, Inches(0.7), y + Inches(0.15), Inches(0.4), Inches(0.4),
-                         border_color=c)
+        rrect(slide, Inches(0.7), y + Inches(0.16), Inches(0.35), Inches(0.35),
+              border=accent)
         # 编号
-        add_text_box(slide, Inches(1.3), y + Inches(0.1), Inches(0.5), Inches(0.5),
-                     f"#{i+1}", font_size=12, color=c, bold=True)
+        txt(slide, Inches(1.2), y + Inches(0.1), Inches(0.5), Inches(0.5),
+            f"#{i+1}", FONT['caption'], accent, bold=True)
         # 文字
-        add_text_box(slide, Inches(1.8), y + Inches(0.1), Inches(10.5), Inches(0.55),
-                     task, font_size=15, color=COLORS['text_light'])
+        txt(slide, Inches(1.7), y + Inches(0.1), Inches(10.5), Inches(0.5),
+            task, FONT['body'], C['text_secondary'])
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_summary_slide(prs, takeaways, module_num, module_name, page_num):
-    """总结页 - 渐进编号"""
+def make_summary(prs, takeaways, mod_num, mod_name, page_num):
+    """总结页"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, "📝 本节小结", c)
+    page_header(slide, "本节小结", accent, "📝")
 
     for i, item in enumerate(takeaways):
-        y = Inches(1.5) + Inches(i * 0.85)
-        if y > Inches(6.5):
+        y = Inches(1.4) + i * Inches(0.85)
+        if y > Inches(6.4):
             break
 
-        # 渐进色编号
-        intensity = max(0.5, 1.0 - i * 0.1)
-        rc = RGBColor(
-            min(255, int(c.red * intensity)),
-            min(255, int(c.green * intensity)),
-            min(255, int(c.blue * intensity))
+        # 渐变色编号（视觉节奏）
+        factor = max(0.5, 1.0 - i * 0.08)
+        fc = RGBColor(
+            min(255, int(accent.red * factor)),
+            min(255, int(accent.green * factor)),
+            min(255, int(accent.blue * factor))
         )
 
-        # 卡片
-        add_rounded_rect(slide, Inches(0.5), y, Inches(12.3), Inches(0.7),
-                         fill_color=COLORS['bg_card'])
-        # 编号
-        add_circle(slide, Inches(0.7), y + Inches(0.1), Inches(0.45), fill_color=rc)
-        add_text_box(slide, Inches(0.7), y + Inches(0.1), Inches(0.45), Inches(0.45),
-                     str(i + 1), font_size=13, color=COLORS['text_white'], bold=True,
-                     alignment=PP_ALIGN.CENTER)
-        # 文字
-        add_text_box(slide, Inches(1.4), y + Inches(0.08), Inches(11), Inches(0.55),
-                     item, font_size=15, color=COLORS['text_light'])
+        rrect(slide, Inches(0.5), y, Inches(12.3), Inches(0.68), fill=C['surface'])
+        circle(slide, Inches(0.7), y + Inches(0.1), Inches(0.4), fill=fc)
+        txt(slide, Inches(0.7), y + Inches(0.1), Inches(0.4), Inches(0.4),
+            str(i + 1), 12, C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
+        txt(slide, Inches(1.3), y + Inches(0.08), Inches(11), Inches(0.5),
+            item, FONT['body'], C['text_secondary'])
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_section_slide(prs, section_title, subtitle, module_num, module_name, page_num):
-    """章节分隔页"""
+def make_section(prs, section_title, subtitle, mod_num, mod_name, page_num):
+    """章节分隔页（Contrast: 大留白 + 大标题）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    # 左侧色块
-    add_shape(slide, Inches(0), Inches(0), Inches(0.15), SLIDE_HEIGHT, fill_color=c)
-    # 装饰线
-    add_accent_line(slide, Inches(1), Inches(3.0), Inches(4), color=c)
-    # 标题
-    add_text_box(slide, Inches(1), Inches(3.3), Inches(10), Inches(1.0),
-                 section_title, font_size=36, color=COLORS['text_white'], bold=True)
-    # 副标题
-    add_text_box(slide, Inches(1), Inches(4.5), Inches(10), Inches(0.8),
-                 subtitle, font_size=18, color=COLORS['text_light'])
+    # 左侧极细色条
+    rect(slide, Inches(0), Inches(0), Inches(0.08), SLIDE_H, fill=accent)
 
-    add_footer(slide, module_num, module_name, page_num)
+    # 大面积留白，只放核心信息
+    line(slide, Inches(1.2), Inches(2.8), Inches(3.5), accent, Pt(3))
+    txt(slide, Inches(1.2), Inches(3.2), Inches(10), Inches(1.0),
+        section_title, FONT['h1'] + 4, C['text_primary'], bold=True)
+    txt(slide, Inches(1.2), Inches(4.4), Inches(10), Inches(0.6),
+        subtitle, FONT['body'] + 2, C['text_tertiary'])
+
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_end_slide(prs, next_module_title, module_num, module_name):
-    """结束页"""
+def make_timeline(prs, title, events, mod_num, mod_name, page_num):
+    """时间线页（Alignment: 横向对齐）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    # 中央大圆
-    add_circle(slide, Inches(5.5), Inches(1.5), Inches(2.3), fill_color=c)
-    add_text_box(slide, Inches(5.5), Inches(1.8), Inches(2.3), Inches(1.8),
-                 "✅", font_size=60, color=COLORS['text_white'], alignment=PP_ALIGN.CENTER)
-
-    # 完成文字
-    add_text_box(slide, Inches(0), Inches(4.2), SLIDE_WIDTH, Inches(0.8),
-                 "本模块结束", font_size=32, color=COLORS['text_white'], bold=True,
-                 alignment=PP_ALIGN.CENTER)
-
-    # 分割线
-    add_accent_line(slide, Inches(5.5), Inches(5.2), Inches(2.3), color=c)
-
-    # 下一模块
-    if next_module_title:
-        add_text_box(slide, Inches(0), Inches(5.5), SLIDE_WIDTH, Inches(0.5),
-                     f"下一模块：{next_module_title}", font_size=18, color=COLORS['text_light'],
-                     alignment=PP_ALIGN.CENTER)
-
-    add_text_box(slide, Inches(0), Inches(6.5), SLIDE_WIDTH, Inches(0.4),
-                 "AI漫剧制作全流程课程 · 2026版", font_size=12, color=COLORS['text_dim'],
-                 alignment=PP_ALIGN.CENTER)
-
-
-def make_icon_grid_slide(prs, title, items, module_num, module_name, page_num):
-    """图标网格页 - 适合展示工具/特性列表"""
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
-
-    add_page_header(slide, title, c)
-
-    cols = 3
-    card_w = Inches(3.7)
-    card_h = Inches(2.2)
-    gap_x = Inches(0.35)
-    gap_y = Inches(0.3)
-    start_x = Inches(0.6)
-    start_y = Inches(1.5)
-
-    for i, item in enumerate(items[:9]):
-        col = i % cols
-        row = i // cols
-        x = start_x + col * (card_w + gap_x)
-        y = start_y + row * (card_h + gap_y)
-
-        sc = [COLORS['accent'], COLORS['accent2'], COLORS['accent3'],
-              COLORS['accent4'], COLORS['accent5'], COLORS['accent6']][i % 6]
-
-        # 卡片
-        add_rounded_rect(slide, x, y, card_w, card_h, fill_color=COLORS['bg_card'])
-        add_shape(slide, x, y, card_w, Inches(0.06), fill_color=sc)
-
-        # 图标/emoji
-        icon = item.get('icon', '📌') if isinstance(item, dict) else '📌'
-        add_text_box(slide, x + Inches(0.2), y + Inches(0.2), Inches(0.6), Inches(0.6),
-                     icon, font_size=28, color=sc)
-
-        # 标题
-        item_title = item.get('title', '') if isinstance(item, dict) else item
-        add_text_box(slide, x + Inches(0.2), y + Inches(0.8), card_w - Inches(0.4), Inches(0.4),
-                     item_title, font_size=14, color=COLORS['text_white'], bold=True)
-
-        # 描述
-        if isinstance(item, dict) and item.get('desc'):
-            add_text_box(slide, x + Inches(0.2), y + Inches(1.3), card_w - Inches(0.4), Inches(0.8),
-                         item['desc'], font_size=11, color=COLORS['text_dim'])
-
-    add_footer(slide, module_num, module_name, page_num)
-
-
-def make_timeline_slide(prs, title, events, module_num, module_name, page_num):
-    """时间线页 - 横向时间轴"""
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
-
-    add_page_header(slide, title, c)
+    page_header(slide, title, accent, "⏱️")
 
     n = len(events)
     if n == 0:
-        add_footer(slide, module_num, module_name, page_num)
+        page_footer(slide, mod_num, mod_name, page_num, accent)
         return
+
+    palette = [C['cyan'], C['violet'], C['orange'], C['emerald'], C['amber'], C['rose']]
 
     # 横轴
     line_y = Inches(3.5)
-    line_x = Inches(0.8)
-    line_w = Inches(11.7)
-    add_shape(slide, line_x, line_y, line_w, Pt(3), fill_color=COLORS['border'])
+    line_x = Inches(1.0)
+    line_w = Inches(11.3)
+    line(slide, line_x, line_y, line_w, C['border'], Pt(2))
 
-    step_colors = [COLORS['accent'], COLORS['accent2'], COLORS['accent3'],
-                   COLORS['accent4'], COLORS['accent5'], COLORS['accent6']]
-
+    step = line_w / n
     for i, ev in enumerate(events):
-        x = line_x + i * (line_w / n)
-        sc = step_colors[i % len(step_colors)]
+        x = line_x + i * step
+        sc = palette[i % len(palette)]
 
-        # 节点圆
-        add_circle(slide, x + Inches(0.3), line_y - Inches(0.15), Inches(0.3), fill_color=sc)
+        # 节点
+        circle(slide, x + Inches(0.35), line_y - Inches(0.12), Inches(0.25), fill=sc)
 
-        # 年份/标签
+        # 标签
         label = ev.get('label', '') if isinstance(ev, dict) else str(ev)
-        add_text_box(slide, x, line_y - Inches(0.8), Inches(1.5), Inches(0.5),
-                     label, font_size=14, color=sc, bold=True, alignment=PP_ALIGN.CENTER)
+        txt(slide, x, line_y - Inches(0.7), Inches(1.2), Inches(0.4),
+            label, FONT['body'], sc, bold=True, align=PP_ALIGN.CENTER)
 
         # 描述（交替上下）
         desc = ev.get('desc', '') if isinstance(ev, dict) else ''
         if desc:
             if i % 2 == 0:
-                # 上方
-                add_rounded_rect(slide, x - Inches(0.2), Inches(1.6), Inches(1.9), Inches(1.2),
-                                 fill_color=COLORS['bg_card'])
-                add_text_box(slide, x - Inches(0.1), Inches(1.7), Inches(1.7), Inches(1.0),
-                             desc, font_size=11, color=COLORS['text_light'])
+                rrect(slide, x - Inches(0.1), Inches(1.5), Inches(1.6), Inches(1.3), fill=C['surface'])
+                txt(slide, x, Inches(1.6), Inches(1.4), Inches(1.1),
+                    desc, FONT['caption'], C['text_secondary'])
             else:
-                # 下方
-                add_rounded_rect(slide, x - Inches(0.2), Inches(4.0), Inches(1.9), Inches(1.2),
-                                 fill_color=COLORS['bg_card'])
-                add_text_box(slide, x - Inches(0.1), Inches(4.1), Inches(1.7), Inches(1.0),
-                             desc, font_size=11, color=COLORS['text_light'])
+                rrect(slide, x - Inches(0.1), Inches(4.0), Inches(1.6), Inches(1.3), fill=C['surface'])
+                txt(slide, x, Inches(4.1), Inches(1.4), Inches(1.1),
+                    desc, FONT['caption'], C['text_secondary'])
 
-    add_footer(slide, module_num, module_name, page_num)
+    page_footer(slide, mod_num, mod_name, page_num, accent)
 
 
-def make_comparison_matrix_slide(prs, title, headers, rows, module_num, module_name, page_num):
-    """对比矩阵页 - 带评分视觉"""
+def make_icon_grid(prs, title, items, mod_num, mod_name, page_num):
+    """图标网格页（Proximity + Alignment）"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, COLORS['bg_dark'])
-    c = get_module_color(module_num)
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
 
-    add_page_header(slide, title, c)
+    page_header(slide, title, accent)
 
-    cols = len(headers)
-    n_rows = len(rows) + 1
-    table_left = Inches(0.5)
-    table_top = Inches(1.5)
-    table_w = Inches(12.3)
-    row_h = Inches(0.7)
+    cols = 3
+    card_w = Inches(3.7)
+    card_h = Inches(2.1)
+    gap = Inches(0.35)
+    sx = Inches(0.65)
+    sy = Inches(1.5)
 
-    table_shape = slide.shapes.add_table(n_rows, cols, table_left, table_top, table_w, row_h * n_rows)
-    table = table_shape.table
+    palette = [C['cyan'], C['violet'], C['orange'], C['emerald'], C['amber'], C['rose']]
 
-    col_w = table_w / cols
-    for j in range(cols):
-        table.columns[j].width = int(col_w)
+    for i, item in enumerate(items[:9]):
+        col, row = i % cols, i // cols
+        x = sx + col * (card_w + gap)
+        y = sy + row * (card_h + gap)
+        sc = palette[i % len(palette)]
 
-    # 表头
-    for j, h in enumerate(headers):
-        cell = table.cell(0, j)
-        cell.text = h
-        cell.fill.solid()
-        cell.fill.fore_color.rgb = COLORS['bg_card']
-        for p in cell.text_frame.paragraphs:
-            p.font.size = Pt(13)
-            p.font.color.rgb = c
-            p.font.bold = True
-            p.font.name = 'Microsoft YaHei'
-            p.alignment = PP_ALIGN.CENTER
+        rrect(slide, x, y, card_w, card_h, fill=C['surface'])
+        rect(slide, x, y, card_w, Pt(3), fill=sc)
 
-    # 数据行
-    for i, row in enumerate(rows):
-        for j, val in enumerate(row):
-            cell = table.cell(i + 1, j)
-            cell.text = str(val)
-            cell.fill.solid()
-            cell.fill.fore_color.rgb = COLORS['bg_card'] if i % 2 == 0 else COLORS['bg_card2']
-            for p in cell.text_frame.paragraphs:
-                p.font.size = Pt(12)
-                p.font.color.rgb = COLORS['text_light']
-                p.font.name = 'Microsoft YaHei'
-                p.alignment = PP_ALIGN.CENTER
+        icon = item.get('icon', '📌') if isinstance(item, dict) else '📌'
+        txt(slide, x + Inches(0.2), y + Inches(0.2), Inches(0.5), Inches(0.5),
+            icon, 26, sc)
 
-    add_footer(slide, module_num, module_name, page_num)
+        item_title = item.get('title', '') if isinstance(item, dict) else item
+        txt(slide, x + Inches(0.2), y + Inches(0.75), card_w - Inches(0.4), Inches(0.35),
+            item_title, FONT['body'], C['text_primary'], bold=True)
+
+        if isinstance(item, dict) and item.get('desc'):
+            txt(slide, x + Inches(0.2), y + Inches(1.2), card_w - Inches(0.4), Inches(0.7),
+                item['desc'], FONT['caption'], C['text_tertiary'])
+
+    page_footer(slide, mod_num, mod_name, page_num, accent)
+
+
+def make_end(prs, next_title, mod_num, mod_name):
+    """结束页（Contrast: 视觉焦点居中）"""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    set_bg(slide, C['bg'])
+    accent = _acc(mod_num)
+
+    # 中央圆（视觉锚点）
+    circle_size = Inches(2.0)
+    cx = (SLIDE_W - circle_size) / 2
+    circle(slide, cx, Inches(1.8), circle_size, fill=accent)
+    txt(slide, cx, Inches(2.1), circle_size, Inches(1.5),
+        "✓", 56, C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
+
+    # 文字
+    txt(slide, Inches(0), Inches(4.2), SLIDE_W, Inches(0.7),
+        "本模块结束", FONT['h1'], C['text_primary'], bold=True, align=PP_ALIGN.CENTER)
+
+    line(slide, Inches(5.5), Inches(5.1), Inches(2.3), accent, Pt(2))
+
+    if next_title:
+        txt(slide, Inches(0), Inches(5.4), SLIDE_W, Inches(0.5),
+            f"下一模块：{next_title}", FONT['body'] + 2, C['text_secondary'], align=PP_ALIGN.CENTER)
+
+    txt(slide, Inches(0), Inches(6.5), SLIDE_W, Inches(0.4),
+        "AI漫剧制作全流程课程 · 2026版", FONT['caption'], C['text_tertiary'], align=PP_ALIGN.CENTER)
 
 
 # ══════════════════════════════════════════════
@@ -866,8 +771,8 @@ def make_comparison_matrix_slide(prs, title, headers, rows, module_num, module_n
 # ══════════════════════════════════════════════
 
 def make_pr(prs):
-    prs.slide_width = SLIDE_WIDTH
-    prs.slide_height = SLIDE_HEIGHT
+    prs.slide_width = SLIDE_W
+    prs.slide_height = SLIDE_H
     return prs
 
 
@@ -877,8 +782,7 @@ def make_pr(prs):
 
 MODULES = [
     {
-        'num': 0,
-        'name': '课程导论',
+        'num': 0, 'name': '课程导论',
         'title': 'AI漫剧制作全流程课程',
         'subtitle': '124课时 · 17个模块 · 从零基础到独立制作完整AI漫剧',
         'next': '行业认知与趋势',
@@ -898,7 +802,7 @@ MODULES = [
                 '了解平台分发与商业变现的路径',
                 '建立工业化生产思维，实现高效量产'
             ]},
-            {'type': 'stat_cards', 'title': '📊 行业数据一览', 'stats': [
+            {'type': 'stat_cards', 'title': '行业数据一览', 'stats': [
                 {'value': '240', 'unit': '亿元', 'label': '市场规模', 'trend': '↑ +50% YoY'},
                 {'value': '2.8', 'unit': '亿', 'label': '用户规模', 'trend': '↑ +40% YoY'},
                 {'value': '15', 'unit': '亿次/天', 'label': '日均播放', 'trend': '↑ +50% YoY'},
@@ -908,12 +812,12 @@ MODULES = [
              'left_title': '🅰️ 零基础速成（8周）', 'left_items': ['快速上手出作品', '重点模块：1,2,3,4,6,10,11,12,17', '适合：想快速入行变现'],
              'right_title': '🅱️ 专业进阶（16周）', 'right_items': ['全面掌握全链路', '全部17个模块', '适合：追求专业深度']},
             {'type': 'step', 'title': '课程学习路线图', 'steps': [
-                'Step 1：行业认知 → 理解AI漫剧是什么、市场多大',
-                'Step 2：创作技能 → 剧本、分镜、提示词工程',
-                'Step 3：工具精通 → 即梦AI、可灵AI、Seedance等',
-                'Step 4：后期制作 → 音频、剪辑、调色、成片',
-                'Step 5：商业运营 → 平台分发、变现、合规',
-                'Step 6：综合实战 → 从0到1独立完成一集AI漫剧'
+                '行业认知 → 理解AI漫剧是什么、市场多大',
+                '创作技能 → 剧本、分镜、提示词工程',
+                '工具精通 → 即梦AI、可灵AI、Seedance等',
+                '后期制作 → 音频、剪辑、调色、成片',
+                '商业运营 → 平台分发、变现、合规',
+                '综合实战 → 从0到1独立完成一集AI漫剧'
             ]},
             {'type': 'key_point', 'title': '核心竞争力',
              'key_point': 'AI漫剧的核心竞争力 = 创意 × 工具熟练度 × 量产能力',
@@ -921,8 +825,7 @@ MODULES = [
         ]
     },
     {
-        'num': 1,
-        'name': '行业认知与趋势',
+        'num': 1, 'name': '行业认知与趋势',
         'title': '模块一：AI漫剧行业认知与趋势',
         'subtitle': '6课时 · 从行业全景到创业路径',
         'next': '大语言模型与剧本创作',
@@ -948,11 +851,11 @@ MODULES = [
                 {'value': '120', 'unit': '万', 'label': '创作者', 'trend': '↑ +50%', 'desc': '较2025年80万'},
             ]},
             {'type': 'step', 'title': '五步工业化流程', 'steps': [
-                'Step 1 · 剧本创作：用AI生成分集剧本',
-                'Step 2 · 分镜设计：将剧本转化为分镜表',
-                'Step 3 · 文生图：用即梦AI生成关键帧画面',
-                'Step 4 · 图生视频：用可灵AI/Seedance让画面动起来',
-                'Step 5 · 剪辑配音：用剪映完成后期制作'
+                '剧本创作：用AI生成分集剧本',
+                '分镜设计：将剧本转化为分镜表',
+                '文生图：用即梦AI生成关键帧画面',
+                '图生视频：用可灵AI/Seedance让画面动起来',
+                '剪辑配音：用剪映完成后期制作'
             ]},
             {'type': 'content', 'title': '爆款案例拆解', 'bullets': [
                 '《斩仙台》：玄幻题材，角色一致性标杆，单集播放破千万',
@@ -976,11 +879,10 @@ MODULES = [
 
 
 # ══════════════════════════════════════════════
-# 生成函数
+# 生成引擎
 # ══════════════════════════════════════════════
 
 def generate_module_ppt(module_data):
-    """生成单个模块的PPT"""
     prs = Presentation()
     make_pr(prs)
 
@@ -991,51 +893,45 @@ def generate_module_ppt(module_data):
     next_mod = module_data.get('next', '')
     pages = module_data['pages']
 
-    # 封面页
-    make_title_slide(prs, title, subtitle, num)
+    make_cover(prs, title, subtitle, num)
 
-    # 内容页
     page_num = 1
     for page in pages:
-        ptype = page['type']
-        if ptype == 'toc':
-            make_toc_slide(prs, page['items'], num, name, page_num)
-        elif ptype == 'content':
-            make_content_slide(prs, page['title'], page['bullets'], num, name, page_num)
-        elif ptype == 'two_col':
-            make_two_col_slide(prs, page['title'], page['left_title'], page['left_items'],
-                               page['right_title'], page['right_items'], num, name, page_num)
-        elif ptype == 'table':
-            make_table_slide(prs, page['title'], page['headers'], page['rows'], num, name, page_num)
-        elif ptype == 'stat_cards':
-            make_stat_cards_slide(prs, page['title'], page['stats'], num, name, page_num)
-        elif ptype == 'icon_grid':
-            make_icon_grid_slide(prs, page['title'], page['items'], num, name, page_num)
-        elif ptype == 'timeline':
-            make_timeline_slide(prs, page['title'], page['events'], num, name, page_num)
-        elif ptype == 'comparison':
-            make_comparison_matrix_slide(prs, page['title'], page['headers'], page['rows'], num, name, page_num)
-        elif ptype == 'key_point':
-            make_key_point_slide(prs, page.get('title', '重点回顾'),
-                                 page['key_point'], page['explanation'], num, name, page_num)
-        elif ptype == 'step':
-            make_step_slide(prs, page['title'], page['steps'], num, name, page_num)
-        elif ptype == 'practice':
-            make_practice_slide(prs, page['title'], page['tasks'], num, name, page_num)
-        elif ptype == 'section':
-            make_section_slide(prs, page['title'], page['subtitle'], num, name, page_num)
-        elif ptype == 'summary':
-            make_summary_slide(prs, page['items'], num, name, page_num)
+        t = page['type']
+        if t == 'toc':
+            make_toc(prs, page['items'], num, name, page_num)
+        elif t == 'content':
+            make_content(prs, page['title'], page['bullets'], num, name, page_num)
+        elif t == 'two_col':
+            make_two_col(prs, page['title'], page['left_title'], page['left_items'],
+                         page['right_title'], page['right_items'], num, name, page_num)
+        elif t == 'table':
+            make_table(prs, page['title'], page['headers'], page['rows'], num, name, page_num)
+        elif t == 'stat_cards':
+            make_stat_cards(prs, page['title'], page['stats'], num, name, page_num)
+        elif t == 'icon_grid':
+            make_icon_grid(prs, page['title'], page['items'], num, name, page_num)
+        elif t == 'timeline':
+            make_timeline(prs, page['title'], page['events'], num, name, page_num)
+        elif t == 'key_point':
+            make_key_point(prs, page.get('title', '核心要点'),
+                           page['key_point'], page['explanation'], num, name, page_num)
+        elif t == 'step':
+            make_steps(prs, page['title'], page['steps'], num, name, page_num)
+        elif t == 'practice':
+            make_practice(prs, page['title'], page['tasks'], num, name, page_num)
+        elif t == 'section':
+            make_section(prs, page['title'], page['subtitle'], num, name, page_num)
+        elif t == 'summary':
+            make_summary(prs, page['items'], num, name, page_num)
         page_num += 1
 
-    # 结束页
-    make_end_slide(prs, next_mod, num, name)
+    make_end(prs, next_mod, num, name)
 
-    # 保存
     filename = f"模块{num:02d}-{name}.pptx" if num > 0 else "00-课程导论.pptx"
     filepath = os.path.join(OUTPUT_DIR, filename)
     prs.save(filepath)
-    print(f"✅ 已生成：{filename}（{len(prs.slides)}页）")
+    print(f"✅ {filename}（{len(prs.slides)}页）")
     return filepath
 
 
