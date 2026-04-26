@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""
+AI漫剧制作课程 PPT 全量生成脚本
+合并所有模块数据，生成18个PPT课件
+"""
+
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from generate_all_ppts import generate_module_ppt, make_pr, make_title_slide, make_toc_slide, make_end_slide, make_content_slide, make_summary_slide, COLORS, SLIDE_WIDTH
+from pptx import Presentation
+from pptx.util import Inches, Pt
+
+# 导入各批次数据
+from ppt_data_02_05 import MODULES_02_05
+from ppt_data_06_09 import MODULES_06_09
+from ppt_data_10_13 import MODULES_10_13
+from ppt_data_14_17 import MODULES_14_17
+
+# ══════════════════════════════════════════════════════════
+# 课程导论（手写）
+# ══════════════════════════════════════════════════════════
+MODULE_INTRO = {
+    'num': 0,
+    'name': '课程导论',
+    'title': 'AI漫剧制作全流程课程',
+    'subtitle': '124课时 · 17个模块 · 从零基础到独立制作完整AI漫剧',
+    'next': '行业认知与趋势',
+    'pages': [
+        {'type': 'toc', 'items': [
+            '行业认知与趋势', '大语言模型与剧本创作', '分镜设计与提示词工程',
+            '即梦AI深度精通', '其他图像生成工具', '可灵AI深度精通',
+            'Seedance 2.0深度精通', '海螺AI与Vidu', '角色一致性攻克',
+            '配音配乐与音画同步', '剪辑与后期全流程', '一站式平台精讲',
+            'ComfyUI工作流', '工业化生产与团队协作', '平台分发与商业变现',
+            '合规要求与行业规范', '综合实战项目'
+        ]},
+        {'type': 'content', 'title': '课程目标', 'bullets': [
+            '掌握AI漫剧从剧本到成片的完整制作流程',
+            '精通即梦AI、可灵AI、Seedance 2.0等核心工具',
+            '能独立制作一集完整的AI漫剧',
+            '了解平台分发与商业变现的路径',
+            '建立工业化生产思维，实现高效量产'
+        ]},
+        {'type': 'table', 'title': '行业数据一览',
+         'headers': ['指标', '2026年数据'],
+         'rows': [['市场规模', '240亿元'], ['用户规模', '2.8亿'], ['日均播放量', '15亿次'], ['创作者数量', '120万'], ['制作成本降幅', '-50%']]},
+        {'type': 'two_col', 'title': '学习路径选择',
+         'left_title': '🅰️ 零基础速成（8周）', 'left_items': ['快速上手出作品', '重点模块：1,2,3,4,6,10,11,12,17', '适合：想快速入行变现'],
+         'right_title': '🅱️ 专业进阶（16周）', 'right_items': ['全面掌握全链路', '全部17个模块', '适合：追求专业深度']},
+        {'type': 'step', 'title': '课程学习路线图', 'steps': [
+            'Step 1：行业认知 → 理解AI漫剧是什么、市场多大',
+            'Step 2：创作技能 → 剧本、分镜、提示词工程',
+            'Step 3：工具精通 → 即梦AI、可灵AI、Seedance等',
+            'Step 4：后期制作 → 音频、剪辑、调色、成片',
+            'Step 5：商业运营 → 平台分发、变现、合规',
+            'Step 6：综合实战 → 从0到1独立完成一集AI漫剧'
+        ]},
+        {'type': 'key_point', 'title': '核心竞争力', 'key_point': 'AI漫剧的核心竞争力 = 创意 × 工具熟练度 × 量产能力',
+         'explanation': '工具会更新迭代，但创意能力和工业化思维是持久的竞争力。本课程不仅教工具操作，更注重培养你的创作思维和生产效率。'},
+    ]
+}
+
+# ══════════════════════════════════════════════════════════
+# 模块01：行业认知与趋势（手写）
+# ══════════════════════════════════════════════════════════
+MODULE_01 = {
+    'num': 1,
+    'name': '行业认知与趋势',
+    'title': '模块一：AI漫剧行业认知与趋势',
+    'subtitle': '6课时 · 从行业全景到创业路径',
+    'next': '大语言模型与剧本创作',
+    'pages': [
+        {'type': 'toc', 'items': ['行业全景：从手工作坊到智能流水线', '市场数据：240亿规模与2.8亿用户', '内容形态：沙雕漫→动态漫→AI原生漫剧', '五步工业化流程', '爆款拆解：《斩仙台》等', '创业路径：个人vs团队vs工作室']},
+        {'type': 'content', 'title': '什么是AI漫剧？', 'bullets': [
+            '利用AI技术辅助或主导制作的动态漫画短剧',
+            '制作周期：传统1-3个月/集 → AI 1-3天/集',
+            '制作成本：传统5-20万/集 → AI 500-5000元/集',
+            '团队规模：传统10-30人 → AI 1-5人',
+            '产能：传统2-4集/月 → AI 30+集/月'
+        ]},
+        {'type': 'content', 'title': '行业发展四个阶段', 'bullets': [
+            '2023 · 沙雕漫：静态图片+配音+字幕，无动态效果',
+            '2024 · 动态漫：图生视频初步应用，画面开始"动起来"',
+            '2025 · AI原生漫剧：全链路AI辅助，单人可完成全流程',
+            '2026 · AI仿真人剧：画面接近真人拍摄质量'
+        ]},
+        {'type': 'table', 'title': '2026年核心市场数据',
+         'headers': ['指标', '2025年', '2026年', '增长率'],
+         'rows': [['市场规模', '160亿', '240亿', '+50%'], ['用户规模', '2.0亿', '2.8亿', '+40%'], ['日均播放', '10亿次', '15亿次', '+50%'], ['创作者', '80万', '120万', '+50%']]},
+        {'type': 'content', 'title': '五步工业化流程', 'bullets': [
+            'Step 1 · 剧本创作：用AI生成分集剧本',
+            'Step 2 · 分镜设计：将剧本转化为分镜表',
+            'Step 3 · 文生图：用即梦AI生成关键帧画面',
+            'Step 4 · 图生视频：用可灵AI/Seedance让画面动起来',
+            'Step 5 · 剪辑配音：用剪映完成后期制作'
+        ]},
+        {'type': 'content', 'title': '爆款案例拆解', 'bullets': [
+            '《斩仙台》：玄幻题材，角色一致性标杆，单集播放破千万',
+            '《气运三角洲》：都市逆袭，节奏把控精准',
+            '《霍去病》：历史题材，画面质感接近电影级别',
+            '共同特点：前3秒强钩子、角色一致性好、节奏紧凑'
+        ]},
+        {'type': 'two_col', 'title': '创业路径选择',
+         'left_title': '👤 个人创作者', 'left_items': ['月入1-10万', '日产1集', '月成本~5000元', '适合：副业/自由职业'],
+         'right_title': '👥 小团队（3-5人）', 'right_items': ['月入10-50万', '日产4集', '月成本~7万', '适合：创业团队']},
+        {'type': 'practice', 'title': '本模块实操任务', 'tasks': [
+            '关注3个AI漫剧行业公众号/博主，建立信息源',
+            '在抖音搜索10个AI漫剧账号，分析其内容特点',
+            '画出完整的AI漫剧产业链地图',
+            '确定自己的定位：个人/团队/工作室',
+            '选择一个感兴趣的题材方向'
+        ]},
+    ]
+}
+
+
+def generate_all():
+    os.makedirs('/root/.openclaw/workspace/ai-video-class/AI漫剧制作课程/PPT课件', exist_ok=True)
+
+    # 合并所有模块
+    all_modules = [MODULE_INTRO, MODULE_01] + MODULES_02_05 + MODULES_06_09 + MODULES_10_13 + MODULES_14_17
+
+    print(f"📦 共 {len(all_modules)} 个模块待生成\n")
+
+    success = 0
+    for m in all_modules:
+        try:
+            path = generate_module_ppt(m)
+            success += 1
+        except Exception as e:
+            print(f"❌ 模块{m['num']:02d} {m['name']} 生成失败: {e}")
+
+    print(f"\n🎉 完成！成功生成 {success}/{len(all_modules)} 个PPT文件")
+    print(f"📁 输出目录：/root/.openclaw/workspace/ai-video-class/AI漫剧制作课程/PPT课件/")
+
+
+if __name__ == '__main__':
+    generate_all()
