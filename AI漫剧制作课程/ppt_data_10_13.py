@@ -25,6 +25,13 @@ MODULES_10_13 = [
                 '拟声字特效制作',
                 '实战项目——一集完整漫剧音频制作',
             ]},
+            # 数据卡片页
+            {'type': 'stat_cards', 'title': '🎤 AI音频工具核心参数', 'stats': [
+                {'value': '30', 'unit': '秒', 'label': '音色克隆', 'desc': '剪映AI克隆音色，极短样本训练'},
+                {'value': '50+', 'unit': '种', 'label': '情感维度', 'desc': 'Fish Audio表情标签精准控制'},
+                {'value': 'ms', 'unit': '级', 'label': '口型对齐', 'desc': 'SkyReels-V4毫秒级同步'},
+                {'value': '100+', 'unit': '种', 'label': '音乐风格', 'desc': 'MiniMax Music-2.0多风格生成'},
+            ]},
             # 内容页：音频工具全景
             {'type': 'content', 'title': '音频制作工具全景', 'bullets': [
                 '火山引擎TTS：中文发音准确度行业领先，支持SSML精细控制',

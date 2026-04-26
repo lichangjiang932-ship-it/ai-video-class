@@ -20,6 +20,16 @@ MODULES_06_09 = [
                 ]
             },
             {
+                'type': 'stat_cards',
+                'title': '🚀 可灵AI 3.0 核心参数',
+                'stats': [
+                    {'value': '1080p', 'unit': '30fps', 'label': '输出分辨率', 'trend': '↑ 影像级画质'},
+                    {'value': '2', 'unit': '分钟', 'label': '最大时长', 'trend': '↑ 较上代x4'},
+                    {'value': '3.0', 'unit': '版本', 'label': '物理仿真引擎', 'desc': '人体动力学+环境交互'},
+                    {'value': '95%', 'unit': '+', 'label': '动作准确率', 'trend': '↑ 多物体协同'},
+                ]
+            },
+            {
                 'type': 'content',
                 'title': '可灵AI 3.0 技术突破',
                 'bullets': [
@@ -351,6 +361,18 @@ MODULES_06_09 = [
                     'ADetailer面部偏移自动修复',
                     '角色资产库工业化管理',
                     '实战：建立完整角色资产体系',
+                ]
+            },
+            {
+                'type': 'icon_grid',
+                'title': '🎯 六大一致性方案速览',
+                'items': [
+                    {'icon': '🖼️', 'title': '角色参考图', 'desc': '输入参考图约束生成，即梦AI/通义万相，难度★★☆'},
+                    {'icon': '📋', 'title': '角色档案', 'desc': '多角度参考图集，Seedance 2.0，难度★★☆'},
+                    {'icon': '🔌', 'title': 'IP-Adapter', 'desc': '特征向量注入，ComfyUI，难度★★★'},
+                    {'icon': '🧠', 'title': 'LoRA微调', 'desc': '训练专属模型，SD WebUI，难度★★★★'},
+                    {'icon': '🔧', 'title': 'ADetailer', 'desc': '面部偏移自动修复，ComfyUI，难度★★☆'},
+                    {'icon': '📦', 'title': '资产库管理', 'desc': '工业化标准数据集，全工具通用，难度★★☆'},
                 ]
             },
             {
