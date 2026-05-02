@@ -1,0 +1,98 @@
+# CI: 检查Markdown格式和链接有效性
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  markdown-lint:
+    name: Markdown格式检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查Markdown文件格式
+        run: |
+          echo "=== 检查Markdown文件 ==="
+          errors=0
+          find . -name "*.md" -not -path "./.git/*" | while read file; do
+            # 检查文件是否为空
+            if [ ! -s "$file" ]; then
+              echo "❌ 空文件: $file"
+              errors=$((errors + 1))
+            fi
+            # 检查是否有尾部空格（超过2个空格）
+            if grep -qE '  $' "$file" 2>/dev/null; then
+              echo "⚠️  尾部空格: $file"
+            fi
+          done
+          echo "=== 格式检查完成 ==="
+
+  link-check:
+    name: 链接检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查内部链接有效性
+        run: |
+          echo "=== 检查内部链接 ==="
+          errors=0
+          find . -name "*.md" -not -path "./.git/*" | while read file; do
+            # 提取Markdown链接中的相对路径
+            grep -oP '\[.*?\]\((?!http)([^)]+)\)' "$file" 2>/dev/null | while read match; do
+              link=$(echo "$match" | grep -oP '\((?!http)([^)]+)\)' | tr -d '()')
+              # 处理锚点
+              target=$(echo "$link" | cut -d'#' -f1)
+              if [ -n "$target" ]; then
+                dir=$(dirname "$file")
+                target_path="$dir/$target"
+                if [ ! -f "$target_path" ]; then
+                  echo "❌ 断链: $file -> $link"
+                  errors=$((errors + 1))
+                fi
+              fi
+            done
+          done
+          if [ $errors -gt 0 ]; then
+            echo "发现 $errors 个断链"
+            exit 1
+          fi
+          echo "=== 所有内部链接有效 ==="
+
+  structure-check:
+    name: 仓库结构检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查必要文件是否存在
+        run: |
+          echo "=== 检查仓库结构 ==="
+          required_files=(
+            "README.md"
+            "LICENSE"
+            "CONTRIBUTING.md"
+            "ROADMAP.md"
+            "SECURITY.md"
+            "AI漫剧制作课程/CHANGELOG.md"
+            "AI漫剧制作课程/00-课程总览.md"
+            "AI漫剧制作课程/学员手册.md"
+          )
+          errors=0
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ 缺少必要文件: $file"
+              errors=$((errors + 1))
+            else
+              echo "✅ $file"
+            fi
+          done
+          if [ $errors -gt 0 ]; then
+            echo "缺少 $errors 个必要文件"
+            exit 1
+          fi
+          echo "=== 结构检查通过 ==="
