@@ -44,8 +44,8 @@ MODULE_INTRO = {
          'headers': ['指标', '2026年数据'],
          'rows': [['市场规模', '240亿元'], ['用户规模', '2.8亿'], ['日均播放量', '15亿次'], ['创作者数量', '120万'], ['制作成本降幅', '-50%']]},
         {'type': 'two_col', 'title': '学习路径选择',
-         'left_title': '🅰️ 零基础速成（8周）', 'left_items': ['快速上手出作品', '重点模块：1,2,3,4,6,10,11,12,17', '适合：想快速入行变现'],
-         'right_title': '🅱️ 专业进阶（16周）', 'right_items': ['全面掌握全链路', '全部17个模块', '适合：追求专业深度']},
+         'left_title': 'A️ 零基础速成（8周）', 'left_items': ['快速上手出作品', '重点模块：1,2,3,4,6,10,11,12,17', '适合：想快速入行变现'],
+         'right_title': 'B️ 专业进阶（16周）', 'right_items': ['全面掌握全链路', '全部17个模块', '适合：追求专业深度']},
         {'type': 'step', 'title': '课程学习路线图', 'steps': [
             'Step 1：行业认知 → 理解AI漫剧是什么、市场多大',
             'Step 2：创作技能 → 剧本、分镜、提示词工程',
@@ -100,8 +100,8 @@ MODULE_01 = {
             '共同特点：前3秒强钩子、角色一致性好、节奏紧凑'
         ]},
         {'type': 'two_col', 'title': '创业路径选择',
-         'left_title': '👤 个人创作者', 'left_items': ['月入1-10万', '日产1集', '月成本~5000元', '适合：副业/自由职业'],
-         'right_title': '👥 小团队（3-5人）', 'right_items': ['月入10-50万', '日产4集', '月成本~7万', '适合：创业团队']},
+         'left_title': '◐ 个人创作者', 'left_items': ['月入1-10万', '日产1集', '月成本~5000元', '适合：副业/自由职业'],
+         'right_title': '◑ 小团队（3-5人）', 'right_items': ['月入10-50万', '日产4集', '月成本~7万', '适合：创业团队']},
         {'type': 'practice', 'title': '本模块实操任务', 'tasks': [
             '关注3个AI漫剧行业公众号/博主，建立信息源',
             '在抖音搜索10个AI漫剧账号，分析其内容特点',
@@ -114,12 +114,12 @@ MODULE_01 = {
 
 
 def generate_all():
-    os.makedirs('/root/.openclaw/workspace/ai-video-class/AI漫剧制作课程/PPT课件', exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PPT课件'), exist_ok=True)
 
     # 合并所有模块
     all_modules = [MODULE_INTRO, MODULE_01] + MODULES_02_05 + MODULES_06_09 + MODULES_10_13 + MODULES_14_17
 
-    print(f"📦 共 {len(all_modules)} 个模块待生成\n")
+    print(f"■ 共 {len(all_modules)} 个模块待生成\n")
 
     success = 0
     for m in all_modules:
@@ -127,11 +127,38 @@ def generate_all():
             path = generate_module_ppt(m)
             success += 1
         except Exception as e:
-            print(f"❌ 模块{m['num']:02d} {m['name']} 生成失败: {e}")
+            print(f"◆ 模块{m['num']:02d} {m['name']} 生成失败: {e}")
 
-    print(f"\n🎉 完成！成功生成 {success}/{len(all_modules)} 个PPT文件")
-    print(f"📁 输出目录：/root/.openclaw/workspace/ai-video-class/AI漫剧制作课程/PPT课件/")
+    print(f"\n★ 完成！成功生成 {success}/{len(all_modules)} 个PPT文件")
+    print(f"▣ 输出目录：./AI漫剧制作课程/PPT课件/")
 
 
-if __name__ == '__main__':
+def merge_to_one():
+    """把 18 个 pptx 合并为一份完整课程 PPT"""
+    from pptx import Presentation
+    import copy
+    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PPT课件')
+    files = sorted([f for f in os.listdir(out_dir) if f.endswith('.pptx') and f != 'AI漫剧制作全流程课程-2026版.pptx'])
+    if not files:
+        print('  no source pptx')
+        return
+    
+    base = Presentation(os.path.join(out_dir, files[0]))
+    for fn in files[1:]:
+        src = Presentation(os.path.join(out_dir, fn))
+        for slide in src.slides:
+            blank_layout = base.slide_layouts[6] if len(base.slide_layouts) > 6 else base.slide_layouts[-1]
+            new_slide = base.slides.add_slide(blank_layout)
+            for shape in slide.shapes:
+                el = shape.element
+                new_slide.shapes._spTree.insert_element_before(copy.deepcopy(el), 'p:extLst')
+    
+    out_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'AI漫剧制作全流程课程-2026版.pptx')
+    base.save(out_file)
+    total = sum(len(Presentation(os.path.join(out_dir, fn)).slides) for fn in files)
+    print(f'\n  ★ 合并完成 → AI漫剧制作全流程课程-2026版.pptx ({total} slides)')
+
+
+if __name__ == "__main__":
     generate_all()
+    merge_to_one()

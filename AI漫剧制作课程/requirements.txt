@@ -1,0 +1,4 @@
+# AI漫剧制作课程 PPT 生成依赖
+# 用法: pip install -r requirements.txt && python generate_all_ppts_final.py
+python-pptx>=1.0.0
+lxml>=4.9.0

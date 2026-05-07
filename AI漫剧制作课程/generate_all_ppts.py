@@ -93,7 +93,7 @@ MODULE_PALETTES = [
 ]
 
 SW, SH = Inches(13.333), Inches(7.5)
-OUT = '/root/.openclaw/workspace/ai-video-class/AI漫剧制作课程/PPT课件'
+import sys, os.path; _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)); OUT = os.path.join(_SCRIPT_DIR, 'PPT课件')
 
 
 # ══════════════════════════════════════════════
@@ -474,7 +474,7 @@ def make_cover(prs, title, subtitle, mn=0):
            "M O D U L E", 10, ac['accent'], al=PP_ALIGN.CENTER)
         _gradient_bar(s, Inches(0.5), Inches(4.5), Inches(2.5), Pt(3), ac['accent'], ac['primary'])
     else:
-        _t(s, Inches(1.0), Inches(1.5), Inches(3.5), Inches(2.5), "🎬", 100, T1, al=PP_ALIGN.CENTER)
+        _t(s, Inches(1.0), Inches(1.5), Inches(3.5), Inches(2.5), "▶", 100, T1, al=PP_ALIGN.CENTER)
         _t(s, Inches(0.5), Inches(4.0), Inches(5), Inches(0.5), "AI漫剧制作", 20, RGBColor(0xFF,0xFF,0xFF), bold=True, al=PP_ALIGN.CENTER)
 
     # 右侧内容
@@ -512,7 +512,7 @@ def make_toc(prs, items, mn, mname, pn):
     s = prs.slides.add_slide(prs.slide_layouts[6]); _bg(s)
     ac = _pal(mn)
     _bg_deco(s, ac)
-    _head(s, "本节内容", ac, "📋")
+    _head(s, "本节内容", ac, "§")
 
     col1 = items[:len(items)//2 + len(items)%2]
     col2 = items[len(items)//2 + len(items)%2:]
@@ -552,7 +552,7 @@ def make_stat_cards(prs, title, stats, mn, mname, pn):
     """数据页：大数字 + 渐变装饰 + 光晕"""
     s = prs.slides.add_slide(prs.slide_layouts[6]); _bg(s)
     ac = _pal(mn)
-    _head(s, title, ac, "📊")
+    _head(s, title, ac, "▤")
 
     n = min(len(stats), 4)
     cw = Inches(12.3 / n - 0.2)
@@ -735,7 +735,7 @@ def make_practice(prs, title, tasks, mn, mname, pn):
     # 用绿色系
     green = {'primary': RGBColor(0x00, 0xCE, 0x7E), 'secondary': RGBColor(0x34, 0xD3, 0x99),
              'accent': RGBColor(0x6E, 0xE7, 0xB7), 'glow': RGBColor(0x0A, 0x3A, 0x2A)}
-    _head(s, title, green, "🛠️")
+    _head(s, title, green, "◆")
 
     for i, task in enumerate(tasks):
         y = Inches(1.5) + i * Inches(0.85)
@@ -755,7 +755,7 @@ def make_summary(prs, items, mn, mname, pn):
     s = prs.slides.add_slide(prs.slide_layouts[6]); _bg(s)
     ac = _pal(mn)
     _bg_deco(s, ac)
-    _head(s, "本节小结", ac, "📝")
+    _head(s, "本节小结", ac, "◆")
 
     for i, item in enumerate(items):
         y = Inches(1.5) + i * Inches(0.78)
@@ -796,7 +796,7 @@ def make_timeline(prs, title, events, mn, mname, pn):
     s = prs.slides.add_slide(prs.slide_layouts[6]); _bg(s)
     ac = _pal(mn)
     _bg_deco(s, ac)
-    _head(s, title, ac, "⏱️")
+    _head(s, title, ac, "§️")
 
     n = len(events)
     if n == 0:
@@ -836,7 +836,7 @@ def make_icon_grid(prs, title, items, mn, mname, pn):
         col, row = i % cols, i // cols
         x = sx + col * (cw + gap); y = sy + row * (ch + gap)
         _card(s, x, y, cw, ch, ac)
-        icon = item.get('icon', '📌') if isinstance(item, dict) else '📌'
+        icon = item.get('icon', '§') if isinstance(item, dict) else '§'
         _t(s, x + Inches(0.2), y + Inches(0.2), Inches(0.5), Inches(0.5), icon, 24, ac['primary'])
         it = item.get('title', '') if isinstance(item, dict) else item
         _t(s, x + Inches(0.2), y + Inches(0.75), cw - Inches(0.4), Inches(0.35), it, 14, T1, bold=True)
@@ -857,7 +857,7 @@ def make_end(prs, nt, mn, mname):
 
     _gradient_bar(s, Inches(4.5), Inches(1.5), Inches(4.3), Pt(3), ac['primary'], ac['secondary'])
 
-    _t(s, Inches(0), Inches(2.2), SW, Inches(1.0), "✓", 64, ac['primary'], bold=True, al=PP_ALIGN.CENTER)
+    _t(s, Inches(0), Inches(2.2), SW, Inches(1.0), "◆", 64, ac['primary'], bold=True, al=PP_ALIGN.CENTER)
     _t(s, Inches(0), Inches(3.5), SW, Inches(0.7), "本模块结束", 30, T1, bold=True, al=PP_ALIGN.CENTER)
     _gradient_bar(s, Inches(5.5), Inches(4.4), Inches(2.3), Pt(2), ac['primary'], ac['secondary'])
     if nt:
@@ -904,8 +904,8 @@ MODULES = [
                 {'value': '120', 'unit': '万', 'label': '创作者', 'trend': '↑ +50% YoY'},
             ]},
             {'type': 'two_col', 'title': '学习路径选择',
-             'left_title': '🅰️ 零基础速成（8周）', 'left_items': ['快速上手出作品', '重点模块：1,2,3,4,6,10,11,12,17', '适合：想快速入行变现'],
-             'right_title': '🅱️ 专业进阶（16周）', 'right_items': ['全面掌握全链路', '全部17个模块', '适合：追求专业深度']},
+             'left_title': 'A️ 零基础速成（8周）', 'left_items': ['快速上手出作品', '重点模块：1,2,3,4,6,10,11,12,17', '适合：想快速入行变现'],
+             'right_title': 'B️ 专业进阶（16周）', 'right_items': ['全面掌握全链路', '全部17个模块', '适合：追求专业深度']},
             {'type': 'step', 'title': '课程学习路线图', 'steps': [
                 '行业认知 → 理解AI漫剧是什么、市场多大',
                 '创作技能 → 剧本、分镜、提示词工程',
@@ -959,8 +959,8 @@ MODULES = [
                 '共同特点：前3秒强钩子、角色一致性好、节奏紧凑'
             ]},
             {'type': 'two_col', 'title': '创业路径选择',
-             'left_title': '👤 个人创作者', 'left_items': ['月入1-10万', '日产1集', '月成本~5000元', '适合：副业/自由职业'],
-             'right_title': '👥 小团队（3-5人）', 'right_items': ['月入10-50万', '日产4集', '月成本~7万', '适合：创业团队']},
+             'left_title': '◐ 个人创作者', 'left_items': ['月入1-10万', '日产1集', '月成本~5000元', '适合：副业/自由职业'],
+             'right_title': '◑ 小团队（3-5人）', 'right_items': ['月入10-50万', '日产4集', '月成本~7万', '适合：创业团队']},
             {'type': 'practice', 'title': '本模块实操任务', 'tasks': [
                 '关注3个AI漫剧行业公众号/博主，建立信息源',
                 '在抖音搜索10个AI漫剧账号，分析其内容特点',
@@ -997,11 +997,11 @@ def generate_module_ppt(md):
     make_end(prs, md.get('next',''), num, name)
     fn = f"模块{num:02d}-{name}.pptx" if num > 0 else "00-课程导论.pptx"
     fp = os.path.join(OUT, fn); prs.save(fp)
-    print(f"✅ {fn}（{len(prs.slides)}页）")
+    print(f"◆ {fn}（{len(prs.slides)}页）")
     return fp
 
 
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     for m in MODULES: generate_module_ppt(m)
-    print(f"\n🎉 已生成 {len(MODULES)} 个PPT文件")
+    print(f"\n★ 已生成 {len(MODULES)} 个PPT文件")
